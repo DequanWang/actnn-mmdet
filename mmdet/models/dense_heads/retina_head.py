@@ -31,6 +31,7 @@ class RetinaHead(AnchorHead):
                  stacked_convs=4,
                  conv_cfg=None,
                  norm_cfg=None,
+                 act_cfg=dict(type='ReLU', inplace=True),
                  anchor_generator=dict(
                      type='AnchorGenerator',
                      octave_base_scale=4,
@@ -50,6 +51,7 @@ class RetinaHead(AnchorHead):
         self.stacked_convs = stacked_convs
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
         super(RetinaHead, self).__init__(
             num_classes,
             in_channels,
@@ -72,7 +74,8 @@ class RetinaHead(AnchorHead):
                     stride=1,
                     padding=1,
                     conv_cfg=self.conv_cfg,
-                    norm_cfg=self.norm_cfg))
+                    norm_cfg=self.norm_cfg,
+                    act_cfg=self.act_cfg))
             self.reg_convs.append(
                 ConvModule(
                     chn,
@@ -81,7 +84,8 @@ class RetinaHead(AnchorHead):
                     stride=1,
                     padding=1,
                     conv_cfg=self.conv_cfg,
-                    norm_cfg=self.norm_cfg))
+                    norm_cfg=self.norm_cfg,
+                    act_cfg=self.act_cfg))
         self.retina_cls = nn.Conv2d(
             self.feat_channels,
             self.num_anchors * self.cls_out_channels,

@@ -2,7 +2,7 @@ import warnings
 
 import torch.nn as nn
 import torch.utils.checkpoint as cp
-from mmcv.cnn import build_conv_layer, build_norm_layer, build_plugin_layer
+from mmcv.cnn import build_conv_layer, build_norm_layer, build_activation_layer, build_plugin_layer
 from mmcv.runner import BaseModule
 from torch.nn.modules.batchnorm import _BatchNorm
 
@@ -23,6 +23,7 @@ class BasicBlock(BaseModule):
                  with_cp=False,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
+                 act_cfg=dict(type='ReLU', inplace=True),
                  dcn=None,
                  plugins=None,
                  init_cfg=None):
@@ -47,7 +48,7 @@ class BasicBlock(BaseModule):
             conv_cfg, planes, planes, 3, padding=1, bias=False)
         self.add_module(self.norm2_name, norm2)
 
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = build_activation_layer(act_cfg)
         self.downsample = downsample
         self.stride = stride
         self.dilation = dilation
@@ -106,6 +107,7 @@ class Bottleneck(BaseModule):
                  with_cp=False,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
+                 act_cfg=dict(type='ReLU', inplace=True),
                  dcn=None,
                  plugins=None,
                  init_cfg=None):
@@ -130,6 +132,7 @@ class Bottleneck(BaseModule):
         self.with_cp = with_cp
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
         self.dcn = dcn
         self.with_dcn = dcn is not None
         self.plugins = plugins
@@ -204,7 +207,7 @@ class Bottleneck(BaseModule):
             bias=False)
         self.add_module(self.norm3_name, norm3)
 
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = build_activation_layer(act_cfg)
         self.downsample = downsample
 
         if self.with_plugins:
@@ -380,6 +383,7 @@ class ResNet(BaseModule):
                  frozen_stages=-1,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
+                 act_cfg=dict(type='ReLU', inplace=True),
                  norm_eval=True,
                  dcn=None,
                  stage_with_dcn=(False, False, False, False),
@@ -442,6 +446,7 @@ class ResNet(BaseModule):
         self.frozen_stages = frozen_stages
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
         self.with_cp = with_cp
         self.norm_eval = norm_eval
         self.dcn = dcn
@@ -477,6 +482,7 @@ class ResNet(BaseModule):
                 with_cp=with_cp,
                 conv_cfg=conv_cfg,
                 norm_cfg=norm_cfg,
+                act_cfg=act_cfg,
                 dcn=dcn,
                 plugins=stage_plugins,
                 init_cfg=block_init_cfg)
@@ -573,7 +579,7 @@ class ResNet(BaseModule):
                     padding=1,
                     bias=False),
                 build_norm_layer(self.norm_cfg, stem_channels // 2)[1],
-                nn.ReLU(inplace=True),
+                build_activation_layer(self.act_cfg),
                 build_conv_layer(
                     self.conv_cfg,
                     stem_channels // 2,
@@ -583,7 +589,7 @@ class ResNet(BaseModule):
                     padding=1,
                     bias=False),
                 build_norm_layer(self.norm_cfg, stem_channels // 2)[1],
-                nn.ReLU(inplace=True),
+                build_activation_layer(self.act_cfg),
                 build_conv_layer(
                     self.conv_cfg,
                     stem_channels // 2,
@@ -593,7 +599,7 @@ class ResNet(BaseModule):
                     padding=1,
                     bias=False),
                 build_norm_layer(self.norm_cfg, stem_channels)[1],
-                nn.ReLU(inplace=True))
+                build_activation_layer(self.act_cfg))
         else:
             self.conv1 = build_conv_layer(
                 self.conv_cfg,
@@ -606,7 +612,7 @@ class ResNet(BaseModule):
             self.norm1_name, norm1 = build_norm_layer(
                 self.norm_cfg, stem_channels, postfix=1)
             self.add_module(self.norm1_name, norm1)
-            self.relu = nn.ReLU(inplace=True)
+            self.relu = build_activation_layer(self.act_cfg)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
     def _freeze_stages(self):

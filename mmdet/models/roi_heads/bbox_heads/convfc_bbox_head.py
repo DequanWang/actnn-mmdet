@@ -1,5 +1,5 @@
 import torch.nn as nn
-from mmcv.cnn import ConvModule
+from mmcv.cnn import ConvModule, build_activation_layer
 
 from mmdet.models.builder import HEADS
 from .bbox_head import BBoxHead
@@ -28,6 +28,7 @@ class ConvFCBBoxHead(BBoxHead):
                  fc_out_channels=1024,
                  conv_cfg=None,
                  norm_cfg=None,
+                 act_cfg=dict(type='ReLU', inplace=True),
                  init_cfg=None,
                  *args,
                  **kwargs):
@@ -51,6 +52,7 @@ class ConvFCBBoxHead(BBoxHead):
         self.fc_out_channels = fc_out_channels
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
+        self.act_cfg = act_cfg
 
         # add shared convs and fcs
         self.shared_convs, self.shared_fcs, last_layer_dim = \
@@ -75,7 +77,7 @@ class ConvFCBBoxHead(BBoxHead):
             if self.num_reg_fcs == 0:
                 self.reg_last_dim *= self.roi_feat_area
 
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = build_activation_layer(self.act_cfg)
         # reconstruct fc_cls and fc_reg since input channels are changed
         if self.with_cls:
             self.fc_cls = nn.Linear(self.cls_last_dim, self.num_classes + 1)
@@ -119,7 +121,8 @@ class ConvFCBBoxHead(BBoxHead):
                         3,
                         padding=1,
                         conv_cfg=self.conv_cfg,
-                        norm_cfg=self.norm_cfg))
+                        norm_cfg=self.norm_cfg,
+                        act_cfg=self.act_cfg))
             last_layer_dim = self.conv_out_channels
         # add branch specific fc layers
         branch_fcs = nn.ModuleList()

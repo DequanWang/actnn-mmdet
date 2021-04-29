@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv import ConfigDict
+from mmcv.cnn import build_conv_layer, build_activation_layer
 from mmcv.ops import batched_nms
 
 from ..builder import HEADS
@@ -30,7 +31,8 @@ class RPNHead(RPNTestMixin, AnchorHead):
 
     def _init_layers(self):
         """Initialize layers of the head."""
-        self.rpn_conv = nn.Conv2d(
+        self.relu = build_activation_layer(self.act_cfg)
+        self.rpn_conv = build_conv_layer(self.conv_cfg,
             self.in_channels, self.feat_channels, 3, padding=1)
         self.rpn_cls = nn.Conv2d(self.feat_channels,
                                  self.num_anchors * self.cls_out_channels, 1)
@@ -39,7 +41,7 @@ class RPNHead(RPNTestMixin, AnchorHead):
     def forward_single(self, x):
         """Forward feature map of a single scale level."""
         x = self.rpn_conv(x)
-        x = F.relu(x, inplace=True)
+        x = self.relu(x)
         rpn_cls_score = self.rpn_cls(x)
         rpn_bbox_pred = self.rpn_reg(x)
         return rpn_cls_score, rpn_bbox_pred
