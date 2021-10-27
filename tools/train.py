@@ -175,6 +175,12 @@ def main():
             CLASSES=datasets[0].CLASSES)
     # add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
+
+    if args.local_rank == 0:
+        for hook in cfg.log_config.hooks:
+            if hook['type'] == 'WandbLoggerHook':
+                hook['init_kwargs']['config'] = copy.deepcopy(cfg)
+
     train_detector(
         model,
         datasets,

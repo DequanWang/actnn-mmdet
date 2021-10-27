@@ -174,4 +174,23 @@ def train_detector(model,
         runner.resume(cfg.resume_from)
     elif cfg.load_from:
         runner.load_checkpoint(cfg.load_from)
-    runner.run(data_loaders, cfg.workflow)
+
+    # runner.run(data_loaders, cfg.workflow)
+    if cfg.actnn:
+        import actnn
+        actnn.ops.filtering_tensors(runner.model.named_parameters())
+
+        def pack_hook(x):
+            quantized, x_shape = actnn.ops.quantize_activation(x, None), x.shape
+            del x
+            return (quantized, x_shape)
+
+        def unpack_hook(x):
+            dequantized = actnn.ops.dequantize_activation(x[0], x[1])
+            del x
+            return dequantized
+
+        with torch.autograd.graph.saved_tensors_hooks(pack_hook, unpack_hook):
+            runner.run(data_loaders, cfg.workflow)
+    else:
+        runner.run(data_loaders, cfg.workflow)
